@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="style.css">
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.13.2/dist/cdn.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <title>Todo List App | Muhammad Rizqi Multazam</title>
+</head>
+<style>
+    [x-cloak] { display: none }
+</style>
+<body>
+    <div class="container max-w-3xl mx-auto mt-10" x-data = "{
+        todoData: [],
+        showModal: false,
+        modalId: 0,
+        modalTitle: '',
+        modalDescription: '',
+        updateModal(id,title,description){
+            this.showModal = true;
+            this.modalId = id;
+            this.modalTitle = title;
+            this.modalDescription = description;
+        }
+    }">
+        <div class="container mx-auto py-[60px] px-[70px] bg-slate-600 rounded-lg shadow-lg text-white">
+                <form x-data="{
+                    title:'',
+                    description:'',
+                    async submit() {
+                        if(this.title == '' || this.description == ''){
+                            Swal.fire({
+                                title: 'Gagal!',
+                                text: 'Data tidak boleh kosong!',
+                                icon: 'error'
+                              });
+                            return;
+                        }
+                        const response = await fetch('/TODOLIST/create_data.php', {
+                            method: 'POST',
+                            headers: { 
+                                'Content-Type': 'application/json'
+                            },
+                            body: JSON.stringify({
+                                nama_kegiatan: this.title,
+                                deskripsi_kegiatan: this.description
+                            })
+                        });
+                        let res = await response.json();
+                        if(res['status']){
+                            todoData.push({
+                                id: res['id'],
+                                title: this.title,
+                                description: this.description
+                            });
+                            this.title = '';
+                            this.description = '';
+                            Swal.fire({
+                                title: 'Success!',
+                                text: 'Data berhasil ditambahkan!',
+                                icon: 'success'
+                              });
+                        }
+                        else{
+                            Swal.fire({
+                                title: 'Gagal!',
+                                text: 'Data gagal ditambahkan!',
+                                icon: 'error'
+                              });
+                        };
+                    }
+                }" x-on:submit.prevent="submit()">
+                    <input type="text" id="title" name="title" x-model="title" class="w-full py-2 px-3 rounded-lg shadow bg-white font-normal text-base text-black" placeholder="input your title here..">
+                    <textarea name="description" x-model="description" class="w-full py-2 px-3 rounded-lg shadow bg-white mt-2 text-black" placeholder="input your description here..." x-on:keydown.enter="submit()"></textarea>
+                    <button type="submit" class="w-full py-3 px-5 text-center bg-blue-500 font-bold rounded-lg shadow-md border border-blue-500 hover:bg-transparent hover:text-blue-500 hover:scale-95 transition ease-in">Add Todo List</button>
+                </form>
+                <div
+                class="relative overflow-x-auto font-inter rounded-md  border  mt-5 mb-[60px]"
+                >
+                <table class="w-full text-left"
+                x-data="
+                {
+                    async deleteData(id){
+                        Swal.fire({
+                            title: 'Apakah kamu yakin?',
+                            text: 'Kamu tidak akan dapat mengembalikan ini!',
+                            icon: 'warning',
+                            showCancelButton: true,
+                            confirmButtonColor: '#3085d6',
+                            cancelButtonColor: '#d33',
+                            confirmButtonText: 'Yes, delete it!'
+                          }).then(async (result) => {
+                            if (result.isConfirmed) {
+                              const response = await fetch('/TODOLIST/delete_data.php', {
+                                  method: 'POST',
+                                  headers: { 
+                                      'Content-Type': 'application/json'
+                                  },
+                                  body: JSON.stringify({
+                                      id: id
+                                  })
+                              });
+                              let res = await response.json();
+                              if(res['status']){
+                                  todoData = todoData.filter(data => data.id != id);
+                                  Swal.fire({
+                                      title: 'Success!',
+                                      text: 'Data berhasil dihapus!',
+                                      icon: 'success'
+                                    });
+                              }
+                              else{
+                                  Swal.fire({
+                                      title: 'Gagal!',
+                                      text: 'Data gagal dihapus!',
+                                      icon: 'error'
+                                    });
+                              };
+                            }
+                          });
+                    }
+                }
+                "
+                x-init="fetch('/TODOLIST/get_data.php')
+                .then(response => response.json())
+                .then(data => todoData = data)"
+                >
+                    <thead class="text-lg text-neutral-700 bg-slate-300">
+                      <tr>
+                        <th scope="col" class="text-center py-3">Title</th>
+                        <th scope="col" class="text-center py-3">Description</th>
+                        <th scope="col" class="text-center py-3">Action</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <template x-for="data in todoData" :key="data.id">
+                        <tr :class="data.id % 2 == 0 ? 'bg-slate-200' : 'bg-white'">
+                            <td class="text-center text-zinc-600 font-semibold" x-text="data.title"></td>
+                            <td class="text-center text-zinc-600 font-semibold" x-text="data.description"></td>
+                            <td class="text-center py-3 text-zinc-600 flex ml-32">
+                                <button class="bg-green-500 text-white font-bold py-2 px-4 rounded-lg mr-2 hover:bg-green-600 hover:scale-95 transition ease-in" x-on:click="updateModal(data.id,data.title,data.description)">Edit</button>
+                                <button class="bg-red-500 text-white font-bold py-2 px-4 rounded-lg hover:bg-red-600 hover:scale-95 transition ease-in" x-on:click="deleteData(data.id)">Delete</button>
+                            </td>
+                          </tr>
+                      </template>
+                    </tbody>
+                  </table>
+                </div>
+        </div>
+            <!-- Modal -->
+            <div class="fixed w-full h-full top-0 left-0 flex items-center justify-center" style="z-index: 9999"
+            x-show="showModal" 
+            x-data = "{
+                async submitUpdate(){
+                    const response = await fetch('/TODOLIST/update_data.php', {
+                        method: 'POST',
+                        headers: { 
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({
+                            id:modalId,
+                            nama_kegiatan:modalTitle,
+                            deskripsi_kegiatan:modalDescription
+                        })
+                    });
+                    let res = await response.json();
+                    if(res['status']){
+                        todoData = todoData.map(data => {
+                            if(data.id == modalId){
+                                data.title = modalTitle;
+                                data.description = modalDescription;
+                            }
+                            return data;
+                        });
+                        modalId = 0;
+                        modalTitle = '';
+                        modalDescription = '';
+                        showModal = false;
+                        Swal.fire({
+                            title: 'Success!',
+                            text: 'Data berhasil diupdate!',
+                            icon: 'success'
+                          });
+                    }
+                    else{
+                        modalId = 0;
+                        modalTitle = '';
+                        modalDescription = '';
+                        showModal = false;
+                        Swal.fire({
+                            title: 'Gagal!',
+                            text: 'Data gagal diupdate!',
+                            icon: 'error'
+                          });
+                    };
+                }
+            }"
+            x-cloak
+            >
+                <div class="modal-overlay absolute w-full h-full bg-gray-900 opacity-50"></div>
+                <div class="modal-container bg-white w-11/12 md:max-w-md mx-auto rounded shadow-lg z-50 overflow-y-auto"
+                x-show="showModal"
+                x-transition:enter="ease-out duration-300"
+                x-transition:enter-start="opacity-0 scale-90"
+                x-transition:enter-end="opacity-100 scale-100"
+                x-transition:leave="ease-in duration-300"
+                x-transition:leave-start="opacity-100 scale-100"
+                x-transition:leave-end="opacity-0 scale-90"
+                >
+                    <div class="modal-content py-4 text-left px-6">
+                        <div class="flex justify-between items-center pb-3">
+                            <p class="text-2xl font-bold">Update Todo : <span x-text="modalId"></span></p>
+                            <div class="modal-close cursor-pointer z-50" x-on:click="showModal=false">
+                                <svg class="fill-current text-black" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 18 18">
+                                    <path d="M18 1.5L16.5 0 9 7.5 1.5 0 0 1.5 7.5 9 0 16.5 1.5 18 9 10.5 16.5 18 18 16.5 10.5 9z"/>
+                                </svg>
+                            </div>
+                        </div>
+                        <!-- Description -->
+                        <form class="my-5" x-on:submit.prevent="submitUpdate()">
+                            <input type="text" class="w-full rounded-lg py-3 px-2 bg-slate-200 text-black" placeholder="input your new title" x-model="modalTitle">
+                            <textarea class="w-full rounded-lg py-3 px-2 bg-slate-200 text-black mt-2" placeholder="input your new description" x-model="modalDescription" x-on:keydown.enter="submitUpdate()"></textarea>
+                            <!-- Buttons -->
+                            <div class="flex justify-end pt-2">
+                                <button type="submit" class="mr-2 modal-update px-4 bg-indigo-500 p-3 rounded-lg text-white hover:bg-indigo-400 hover:scale-95 transition ease-in">Update</button>
+                                <button type="button" class="modal-cancel px-4 bg-red-500 p-3 rounded-lg text-white hover:bg-red-400 hover:scale-95 transition ease-in" x-on:click="showModal=false">Cancel</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+    </div>
+</body>
+</html>
